@@ -192,7 +192,7 @@ class Game{
         this.drawAll();
     }
     
-    // 次の移動が可能かチェック
+    // 次の移動が可能かチェック（壁キック対応版）
     valid(moveX, moveY, rot=0){
         let newBlocks = this.mino.getNewBlocks(moveX, moveY, rot)
         return newBlocks.every(block => {
@@ -206,26 +206,79 @@ class Game{
         })
     }
 
+    // 壁キック対応の回転処理
+    tryRotate(){
+        // O型（正方形）は回転しても同じなので処理を省略
+        if(this.mino.type === 1) {
+            return true // O型は常に回転成功として扱う
+        }
+
+        // 基本的な回転が可能かチェック
+        if(this.valid(0, 0, 1)){
+            this.mino.rotate()
+            return true
+        }
+
+        // 壁キック試行（左右への移動を試す）
+        const kickOffsets = [-1, 1, -2, 2] // 左1、右1、左2、右2の順で試行
+        
+        for(let offset of kickOffsets){
+            if(this.valid(offset, 0, 1)){
+                this.mino.x += offset
+                this.mino.rotate()
+                return true
+            }
+        }
+
+        // I型ミノの特別処理（より大きな範囲での壁キック）
+        if(this.mino.type === 0){ // I型
+            const iKickOffsets = [-3, 3] // より大きな移動も試行
+            for(let offset of iKickOffsets){
+                if(this.valid(offset, 0, 1)){
+                    this.mino.x += offset
+                    this.mino.rotate()
+                    return true
+                }
+            }
+        }
+
+        return false // 回転不可
+    }
+
     // キーボードイベント
     setKeyEvent(){
         document.onkeydown = function(e){
             if (!this.isPlaying) return
             
+            let moved = false
             switch(e.keyCode){
                 case 37: // 左
-                    if( this.valid(-1, 0)) this.mino.x--;
+                    if( this.valid(-1, 0)) {
+                        this.mino.x--
+                        moved = true
+                    }
                     break;
                 case 39: // 右
-                    if( this.valid(1, 0)) this.mino.x++;
+                    if( this.valid(1, 0)) {
+                        this.mino.x++
+                        moved = true
+                    }
                     break;
                 case 40: // 下
-                    if( this.valid(0, 1) ) this.mino.y++;
+                    if( this.valid(0, 1) ) {
+                        this.mino.y++
+                        moved = true
+                    }
                     break;
                 case 32: // スペース
-                    if( this.valid(0, 0, 1)) this.mino.rotate();
+                    if( this.tryRotate()) {
+                        moved = true
+                    }
                     break;
             }
-            this.drawAll()
+            if (moved) {
+                this.drawAll()
+            }
         }.bind(this)
     }
 
@@ -236,93 +289,154 @@ class Game{
         const downBtn = document.getElementById('down-btn')
         const rotateBtn = document.getElementById('rotate-btn')
 
-        if (leftBtn) {
-            leftBtn.addEventListener('touchstart', (e) => {
+        // ボタンごとの状態管理
+        const createButtonHandler = (moveFunction) => {
+            let isPressed = false
+            let intervalId = null
+            
+            const startPress = (e) => {
                 e.preventDefault()
-                if (!this.isPlaying) return
+                e.stopPropagation()
+                if (!this.isPlaying || isPressed) return
+                
+                isPressed = true
+                
+                // 即座に1回実行
+                moveFunction()
+                
+                // 長押し用の連続実行
+                let delay = 300 // 初回遅延
+                const repeat = () => {
+                    if (!isPressed || !this.isPlaying) return
+                    moveFunction()
+                    delay = 120 // 2回目以降の間隔
+                    intervalId = setTimeout(repeat, delay)
+                }
+                intervalId = setTimeout(repeat, delay)
+            }
+            
+            const endPress = (e) => {
+                e.preventDefault()
+                isPressed = false
+                if (intervalId) {
+                    clearTimeout(intervalId)
+                    intervalId = null
+                }
+            }
+            
+            return { startPress, endPress }
+        }
+
+        // 左移動ボタン
+        if (leftBtn) {
+            const leftHandler = createButtonHandler(() => {
                 if (this.valid(-1, 0)) {
                     this.mino.x--
                     this.drawAll()
                 }
             })
+            
+            leftBtn.addEventListener('touchstart', leftHandler.startPress)
+            leftBtn.addEventListener('touchend', leftHandler.endPress)
+            leftBtn.addEventListener('touchcancel', leftHandler.endPress)
+            leftBtn.addEventListener('mousedown', leftHandler.startPress)
+            leftBtn.addEventListener('mouseup', leftHandler.endPress)
+            leftBtn.addEventListener('mouseleave', leftHandler.endPress)
         }
 
+        // 右移動ボタン
         if (rightBtn) {
-            rightBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault()
-                if (!this.isPlaying) return
+            const rightHandler = createButtonHandler(() => {
                 if (this.valid(1, 0)) {
                     this.mino.x++
                     this.drawAll()
                 }
             })
+            
+            rightBtn.addEventListener('touchstart', rightHandler.startPress)
+            rightBtn.addEventListener('touchend', rightHandler.endPress)
+            rightBtn.addEventListener('touchcancel', rightHandler.endPress)
+            rightBtn.addEventListener('mousedown', rightHandler.startPress)
+            rightBtn.addEventListener('mouseup', rightHandler.endPress)
+            rightBtn.addEventListener('mouseleave', rightHandler.endPress)
         }
 
+        // 下移動ボタン（高速落下）
         if (downBtn) {
-            downBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault()
-                if (!this.isPlaying) return
+            const downHandler = createButtonHandler(() => {
                 if (this.valid(0, 1)) {
                     this.mino.y++
                     this.drawAll()
                 }
             })
+            
+            downBtn.addEventListener('touchstart', downHandler.startPress)
+            downBtn.addEventListener('touchend', downHandler.endPress)
+            downBtn.addEventListener('touchcancel', downHandler.endPress)
+            downBtn.addEventListener('mousedown', downHandler.startPress)
+            downBtn.addEventListener('mouseup', downHandler.endPress)
+            downBtn.addEventListener('mouseleave', downHandler.endPress)
         }
 
+        // 回転ボタン（長押し対応、間隔を長めに設定）
         if (rotateBtn) {
-            rotateBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault()
-                if (!this.isPlaying) return
+            const rotateHandler = createButtonHandler(() => {
                 if (this.valid(0, 0, 1)) {
                     this.mino.rotate()
                     this.drawAll()
                 }
             })
-        }
-
-        // クリックイベントも追加（デスクトップでも使用可能）
-        if (leftBtn) {
-            leftBtn.addEventListener('click', (e) => {
-                e.preventDefault()
-                if (!this.isPlaying) return
-                if (this.valid(-1, 0)) {
-                    this.mino.x--
+            
+            // 回転は誤操作防止のため、より長い間隔で設定
+            const createRotateHandler = (moveFunction) => {
+                let isPressed = false
+                let intervalId = null
+                
+                const startPress = (e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (!this.isPlaying || isPressed) return
+                    
+                    isPressed = true
+                    
+                    // 即座に1回実行
+                    moveFunction()
+                    
+                    // 長押し用の連続実行（回転は間隔を長めに）
+                    let delay = 500 // 初回遅延を長く
+                    const repeat = () => {
+                        if (!isPressed || !this.isPlaying) return
+                        moveFunction()
+                        delay = 300 // 2回目以降も長めの間隔
+                        intervalId = setTimeout(repeat, delay)
+                    }
+                    intervalId = setTimeout(repeat, delay)
+                }
+                
+                const endPress = (e) => {
+                    e.preventDefault()
+                    isPressed = false
+                    if (intervalId) {
+                        clearTimeout(intervalId)
+                        intervalId = null
+                    }
+                }
+                
+                return { startPress, endPress }
+            }
+            
+            const rotateHandler2 = createRotateHandler(() => {
+                if (this.tryRotate()) {
                     this.drawAll()
                 }
             })
-        }
-
-        if (rightBtn) {
-            rightBtn.addEventListener('click', (e) => {
-                e.preventDefault()
-                if (!this.isPlaying) return
-                if (this.valid(1, 0)) {
-                    this.mino.x++
-                    this.drawAll()
-                }
-            })
-        }
-
-        if (downBtn) {
-            downBtn.addEventListener('click', (e) => {
-                e.preventDefault()
-                if (!this.isPlaying) return
-                if (this.valid(0, 1)) {
-                    this.mino.y++
-                    this.drawAll()
-                }
-            })
-        }
-
-        if (rotateBtn) {
-            rotateBtn.addEventListener('click', (e) => {
-                e.preventDefault()
-                if (!this.isPlaying) return
-                if (this.valid(0, 0, 1)) {
-                    this.mino.rotate()
-                    this.drawAll()
-                }
-            })
+            
+            rotateBtn.addEventListener('touchstart', rotateHandler2.startPress)
+            rotateBtn.addEventListener('touchend', rotateHandler2.endPress)
+            rotateBtn.addEventListener('touchcancel', rotateHandler2.endPress)
+            rotateBtn.addEventListener('mousedown', rotateHandler2.startPress)
+            rotateBtn.addEventListener('mouseup', rotateHandler2.endPress)
+            rotateBtn.addEventListener('mouseleave', rotateHandler2.endPress)
         }
     }
 }
@@ -462,17 +576,17 @@ class Mino{
             return new Block(block.x, block.y)
         })
         newBlocks.forEach(block => {
-            // 移動させる場合
-            if(moveX || moveY){
-                block.x += moveX
-                block.y += moveY
-            }
-
-            // 回転させる場合
+            // 回転させる場合（移動より先に処理）
             if(rot){
                 let oldX = block.x
                 block.x = block.y
                 block.y = 3-oldX
+            }
+
+            // 移動させる場合
+            if(moveX || moveY){
+                block.x += moveX
+                block.y += moveY
             }
 
             // グローバル座標に変換
