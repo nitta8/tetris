@@ -61,6 +61,7 @@ class Game{
         this.initMainCanvas()
         this.initNextCanvas()
         this.isPlaying = false
+        this.isAnimating = false  // アニメーション中フラグ
         this.initScore()
     }
 
@@ -78,6 +79,16 @@ class Game{
         document.getElementById('score').textContent = this.score.toLocaleString()
         document.getElementById('level').textContent = this.level
         document.getElementById('lines').textContent = this.lines
+    }
+
+    // レベル表示の強調エフェクト
+    highlightLevelDisplay(){
+        const levelElement = document.getElementById('level')
+        levelElement.classList.add('level-up')
+        
+        setTimeout(() => {
+            levelElement.classList.remove('level-up')
+        }, 1500) // 1.5秒後に元に戻す
     }
 
     // メインキャンバスの初期化
@@ -210,17 +221,61 @@ class Game{
             // ミノ配置ボーナス
             this.score += this.level
             
-            // ライン消去とスコア計算
-            const linesCleared = this.field.checkLine()
-            if(linesCleared > 0){
-                this.addScore(linesCleared)
+            // ライン消去チェックとアニメーション
+            const completedLines = this.field.checkLine()
+            if(completedLines.length > 0){
+                this.animateLineClear(completedLines)
             } else {
                 this.updateScoreDisplay()
+                this.popMino()
             }
-            
-            this.popMino()
         }
         this.drawAll();
+    }
+
+    // ライン消去アニメーション
+    animateLineClear(completedLines){
+        this.isAnimating = true  // アニメーション開始
+        
+        // ゲームタイマーを一時停止
+        clearInterval(this.timer)
+        
+        let flashCount = 0
+        const maxFlashes = 6 // 3回点滅
+        
+        const flashInterval = setInterval(() => {
+            // 点滅効果（偶数回は非表示、奇数回は白色表示）
+            this.drawAll()
+            
+            if(flashCount % 2 === 1){
+                // 白色で点滅表示
+                this.mainCtx.fillStyle = '#FFFFFF'
+                completedLines.forEach(line => {
+                    this.mainCtx.fillRect(
+                        0, 
+                        line * BLOCK_SIZE, 
+                        SCREEN_WIDTH, 
+                        BLOCK_SIZE
+                    )
+                })
+            }
+            
+            flashCount++
+            
+            if(flashCount >= maxFlashes){
+                clearInterval(flashInterval)
+                
+                // アニメーション終了後にライン消去とスコア処理
+                this.field.clearLines(completedLines)
+                this.addScore(completedLines.length)
+                this.popMino()
+                this.drawAll()
+                
+                // アニメーション終了、ゲーム再開
+                this.isAnimating = false
+                this.timer = setInterval(() => this.dropMino(), this.gameSpeed)
+            }
+        }, 120) // 120ms間隔で点滅（少し遅めに調整）
     }
 
     // スコア加算とレベルアップ処理
@@ -235,11 +290,61 @@ class Game{
         // レベルアップ判定（10ライン毎）
         const newLevel = Math.floor(this.lines / 10) + 1
         if(newLevel > this.level){
+            const oldLevel = this.level
             this.level = newLevel
             this.updateGameSpeed()
+            this.animateLevelUp(oldLevel, newLevel)
+        } else {
+            this.updateScoreDisplay()
         }
+    }
+
+    // レベルアップアニメーション
+    animateLevelUp(oldLevel, newLevel){
+        this.isAnimating = true
         
-        this.updateScoreDisplay()
+        // レベル表示を強調
+        this.highlightLevelDisplay()
+        
+        // 画面全体を光らせるエフェクト
+        let flashCount = 0
+        const maxFlashes = 8 // 4回点滅
+        
+        const levelUpInterval = setInterval(() => {
+            this.drawAll()
+            
+            if(flashCount % 2 === 1){
+                // 画面全体を薄い金色でオーバーレイ
+                this.mainCtx.fillStyle = 'rgba(255, 215, 0, 0.3)' // 金色半透明
+                this.mainCtx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+                
+                // "LEVEL UP!" テキスト表示
+                this.mainCtx.fillStyle = '#FFD700' // 金色
+                this.mainCtx.font = 'bold 24px Arial'
+                this.mainCtx.textAlign = 'center'
+                this.mainCtx.fillText('LEVEL UP!', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 20)
+                
+                this.mainCtx.font = 'bold 18px Arial'
+                this.mainCtx.fillStyle = '#FFFFFF'
+                this.mainCtx.fillText(`${oldLevel} → ${newLevel}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 10)
+                
+                // スピードアップメッセージ
+                this.mainCtx.font = 'bold 14px Arial'
+                this.mainCtx.fillStyle = '#FFFF00'
+                this.mainCtx.fillText('SPEED UP!', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 35)
+            }
+            
+            flashCount++
+            
+            if(flashCount >= maxFlashes){
+                clearInterval(levelUpInterval)
+                
+                // アニメーション終了
+                this.isAnimating = false
+                this.updateScoreDisplay()
+                this.drawAll()
+            }
+        }, 150) // 150ms間隔で点滅
     }
 
     // ゲーム速度の更新
@@ -310,7 +415,7 @@ class Game{
     // キーボードイベント
     setKeyEvent(){
         document.onkeydown = function(e){
-            if (!this.isPlaying) return
+            if (!this.isPlaying || this.isAnimating) return
             
             let moved = false
             switch(e.keyCode){
@@ -359,7 +464,7 @@ class Game{
             const startPress = (e) => {
                 e.preventDefault()
                 e.stopPropagation()
-                if (!this.isPlaying || isPressed) return
+                if (!this.isPlaying || this.isAnimating || isPressed) return
                 
                 isPressed = true
                 
@@ -457,7 +562,7 @@ class Game{
                 const startPress = (e) => {
                     e.preventDefault()
                     e.stopPropagation()
-                    if (!this.isPlaying || isPressed) return
+                    if (!this.isPlaying || this.isAnimating || isPressed) return
                     
                     isPressed = true
                     
@@ -670,16 +775,27 @@ class Field{
     }
 
     checkLine(){
-      let linesCleared = 0
+      let completedLines = []
+      
+      // 完成したラインを特定
       for(var r = 0; r < ROWS_COUNT; r++){
         var c = this.blocks.filter(block => block.y === r).length
         if(c === COLS_COUNT){
-          this.blocks = this.blocks.filter(block => block.y !== r)
-          this.blocks.filter(block => block.y < r).forEach(upper => upper.y++)
-          linesCleared++
+          completedLines.push(r)
         }
       }
-      return linesCleared
+      
+      return completedLines
+    }
+
+    // ライン消去の実際の処理
+    clearLines(linesToClear){
+      // 指定されたラインを削除
+      linesToClear.forEach(line => {
+        this.blocks = this.blocks.filter(block => block.y !== line)
+        // 上のブロックを下に移動
+        this.blocks.filter(block => block.y < line).forEach(upper => upper.y++)
+      })
     }
 
     has(x, y){
