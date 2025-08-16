@@ -79,11 +79,41 @@ class Game{
     // キャンバスのレスポンシブ対応
     resizeCanvas(){
         const container = document.getElementById('container')
-        const maxWidth = Math.min(container.clientWidth - 40, SCREEN_WIDTH)
-        if (maxWidth < SCREEN_WIDTH) {
-            const scale = maxWidth / SCREEN_WIDTH
-            this.mainCanvas.style.width = maxWidth + 'px'
+        const isMobile = window.innerWidth <= 768
+        
+        if (isMobile) {
+            // モバイル用のサイズ調整
+            const availableWidth = Math.min(window.innerWidth - 20, 320)
+            const availableHeight = Math.min(window.innerHeight * 0.5, 400)
+            
+            // アスペクト比を維持しながらサイズを調整
+            const scale = Math.min(availableWidth / SCREEN_WIDTH, availableHeight / SCREEN_HEIGHT)
+            
+            this.mainCanvas.style.width = (SCREEN_WIDTH * scale) + 'px'
             this.mainCanvas.style.height = (SCREEN_HEIGHT * scale) + 'px'
+            
+            // ネクストキャンバスも調整
+            if (this.nextCanvas) {
+                const nextScale = Math.min(scale, 0.5)
+                this.nextCanvas.style.width = (NEXT_AREA_SIZE * nextScale) + 'px'
+                this.nextCanvas.style.height = (NEXT_AREA_SIZE * nextScale) + 'px'
+            }
+        } else {
+            // デスクトップ用
+            const maxWidth = Math.min(container.clientWidth - 40, SCREEN_WIDTH)
+            if (maxWidth < SCREEN_WIDTH) {
+                const scale = maxWidth / SCREEN_WIDTH
+                this.mainCanvas.style.width = maxWidth + 'px'
+                this.mainCanvas.style.height = (SCREEN_HEIGHT * scale) + 'px'
+            } else {
+                this.mainCanvas.style.width = SCREEN_WIDTH + 'px'
+                this.mainCanvas.style.height = SCREEN_HEIGHT + 'px'
+            }
+            
+            if (this.nextCanvas) {
+                this.nextCanvas.style.width = NEXT_AREA_SIZE + 'px'
+                this.nextCanvas.style.height = NEXT_AREA_SIZE + 'px'
+            }
         }
     }
 
