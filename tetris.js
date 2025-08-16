@@ -188,7 +188,7 @@ class Game{
             this.drawAll()
             clearInterval(this.timer)
             this.isPlaying = false
-            alert("ゲームオーバー")
+            this.showGameOver()
         }
     }
 
@@ -606,6 +606,55 @@ class Game{
             rotateBtn.addEventListener('mouseleave', rotateHandler2.endPress)
         }
     }
+
+    // ゲームオーバー画面を表示
+    showGameOver(){
+        // 最終スコアを表示
+        document.getElementById('final-score').textContent = this.score.toLocaleString()
+        document.getElementById('final-lines').textContent = this.lines.toString()
+        document.getElementById('final-level').textContent = this.level.toString()
+        
+        // オーバーレイを表示
+        const overlay = document.getElementById('game-over-overlay')
+        overlay.classList.remove('hidden')
+        overlay.classList.add('show')
+        
+        // リスタートボタンのイベント設定
+        document.getElementById('restart-btn').onclick = () => {
+            this.restart()
+        }
+    }
+
+    // ゲーム再開
+    restart(){
+        // オーバーレイを非表示
+        const overlay = document.getElementById('game-over-overlay')
+        overlay.classList.add('hidden')
+        overlay.classList.remove('show')
+        
+        // ゲーム状態をリセット
+        this.score = 0
+        this.lines = 0
+        this.level = 1
+        this.isPlaying = false
+        this.isAnimating = false
+        
+        // フィールドをクリア
+        this.field.blocks = []
+        
+        // 画面をクリア
+        this.drawAll()
+        
+        // スコア表示を更新
+        this.updateScoreDisplay()
+        
+        // 新しいゲームを開始準備
+        this.popMino()
+        this.isPlaying = true
+        
+        // タイマー再開
+        this.timer = setInterval(this.dropMino.bind(this), this.getDropInterval())
+    }
 }
 
 class Block{
@@ -676,7 +725,7 @@ class Block{
 
 class Mino{
     constructor(){
-        this.type = Math.floor(Math.random() * 7);
+        this.type = 1; // 正方形（O型）のミノのみ
         this.initBlocks()
     }
 

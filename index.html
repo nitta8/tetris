@@ -349,6 +349,205 @@
             min-height: 25px;
           }
         }
+
+        /* ゲームオーバー画面 */
+        .overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.9);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+          backdrop-filter: blur(5px);
+        }
+
+        .overlay.hidden {
+          display: none;
+        }
+
+        .overlay.show {
+          animation: fadeIn 0.5s ease-out;
+        }
+
+        .game-over-modal {
+          background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%);
+          border: 3px solid #fff;
+          border-radius: 20px;
+          padding: 30px;
+          text-align: center;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+          transform: scale(0.8);
+          animation: modalPop 0.6s ease-out forwards;
+          max-width: 90%;
+          width: 400px;
+        }
+
+        .game-over-header {
+          margin-bottom: 20px;
+        }
+
+        .game-over-title {
+          font-size: 3em;
+          margin: 0;
+          color: #ff6b6b;
+          text-shadow: 3px 3px 0px #000;
+          animation: titlePulse 2s ease-in-out infinite;
+        }
+
+        .game-over-animation {
+          font-size: 4em;
+          animation: explode 1s ease-out infinite;
+          margin: 10px 0;
+        }
+
+        .final-score-panel {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 15px;
+          padding: 20px;
+          margin: 20px 0;
+          backdrop-filter: blur(10px);
+        }
+
+        .final-score-panel h2 {
+          margin: 0 0 15px 0;
+          color: #fff;
+          font-size: 1.5em;
+        }
+
+        .final-score-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .final-score-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .final-score-item:last-child {
+          border-bottom: none;
+        }
+
+        .final-label {
+          font-size: 1.1em;
+          color: #ccc;
+          font-weight: bold;
+        }
+
+        .final-value {
+          font-size: 1.3em;
+          color: #FFD700;
+          font-weight: bold;
+          text-shadow: 1px 1px 2px #000;
+          animation: scoreGlow 2s ease-in-out infinite;
+        }
+
+        .game-over-buttons {
+          margin-top: 20px;
+        }
+
+        .restart-btn {
+          font-size: 1.2em;
+          padding: 15px 30px;
+          background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+          color: white;
+          border: none;
+          border-radius: 50px;
+          cursor: pointer;
+          font-weight: bold;
+          transition: all 0.3s ease;
+          box-shadow: 0 5px 15px rgba(238, 90, 82, 0.4);
+        }
+
+        .restart-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(238, 90, 82, 0.6);
+          background: linear-gradient(45deg, #ee5a52, #ff6b6b);
+        }
+
+        .restart-btn:active {
+          transform: translateY(0);
+          box-shadow: 0 3px 10px rgba(238, 90, 82, 0.4);
+        }
+
+        /* アニメーション */
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes modalPop {
+          0% {
+            transform: scale(0.5) rotate(-5deg);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05) rotate(2deg);
+          }
+          100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+          }
+        }
+
+        @keyframes titlePulse {
+          0%, 100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+        }
+
+        @keyframes explode {
+          0%, 100% {
+            transform: scale(1) rotate(0deg);
+          }
+          25% {
+            transform: scale(1.2) rotate(-10deg);
+          }
+          75% {
+            transform: scale(1.1) rotate(10deg);
+          }
+        }
+
+        @keyframes scoreGlow {
+          0%, 100% {
+            text-shadow: 1px 1px 2px #000, 0 0 5px #FFD700;
+          }
+          50% {
+            text-shadow: 1px 1px 2px #000, 0 0 15px #FFD700, 0 0 20px #FFD700;
+          }
+        }
+
+        /* モバイル対応 */
+        @media (max-width: 480px) {
+          .game-over-modal {
+            padding: 20px;
+            width: 90%;
+          }
+
+          .game-over-title {
+            font-size: 2em;
+          }
+
+          .game-over-animation {
+            font-size: 2.5em;
+          }
+
+          .restart-btn {
+            font-size: 1em;
+            padding: 12px 25px;
+          }
+        }
       </style>
   </head>
   <body>
@@ -390,6 +589,39 @@
         </div>
       </div>
     </div>
+    
+    <!-- ゲームオーバー画面 -->
+    <div id="game-over-overlay" class="overlay hidden">
+      <div class="game-over-modal">
+        <div class="game-over-header">
+          <h1 class="game-over-title">GAME OVER</h1>
+          <div class="game-over-animation">💥</div>
+        </div>
+        
+        <div class="final-score-panel">
+          <h2>最終スコア</h2>
+          <div class="final-score-grid">
+            <div class="final-score-item">
+              <span class="final-label">スコア</span>
+              <span class="final-value" id="final-score">0</span>
+            </div>
+            <div class="final-score-item">
+              <span class="final-label">ライン</span>
+              <span class="final-value" id="final-lines">0</span>
+            </div>
+            <div class="final-score-item">
+              <span class="final-label">レベル</span>
+              <span class="final-value" id="final-level">1</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="game-over-buttons">
+          <button class="restart-btn" id="restart-btn">🔄 もう一度プレイ</button>
+        </div>
+      </div>
+    </div>
+    
     <script src="tetris.js"></script>
   </body>
 </html>
