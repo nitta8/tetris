@@ -27,15 +27,25 @@
 
         #game-area {
           display: flex;
-          gap: 20px;
+          gap: 10px;
           align-items: flex-start;
-          justify-content: center;
-          flex-wrap: wrap;
+          justify-content: flex-start;
+          width: 100%;
         }
 
         #main-canvas{
           border: 4px solid #555;
           background: #000;
+          flex-shrink: 0;
+        }
+
+        #right-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+          align-items: center;
+          flex: 1;
+          min-width: 0;
         }
 
         #side-panel {
@@ -43,6 +53,7 @@
           flex-direction: column;
           gap: 15px;
           align-items: center;
+          width: 100%;
         }
 
         #next-canvas{
@@ -76,7 +87,7 @@
         }
 
         #touch-controls {
-          display: none;
+          display: block;
           margin-top: 20px;
           width: 100%;
           max-width: 320px;
@@ -119,7 +130,7 @@
         /* モバイル対応 */
         @media (max-width: 768px) {
           body {
-            padding: 2px;
+            padding: 5px;
             margin: 0;
           }
 
@@ -130,26 +141,23 @@
           }
 
           #game-area {
-            flex-direction: column;
-            align-items: center;
             gap: 8px;
-            width: 100%;
+            align-items: flex-start;
           }
 
           #main-canvas {
-            max-width: calc(100vw - 20px);
+            max-width: 60vw;
             width: auto;
             height: auto;
-            max-height: 50vh;
+          }
+
+          #right-panel {
+            gap: 10px;
+            max-width: 35vw;
           }
 
           #side-panel {
-            flex-direction: row;
-            justify-content: space-around;
-            align-items: center;
-            gap: 10px;
-            width: 100%;
-            flex-wrap: wrap;
+            gap: 8px;
           }
 
           #next-canvas {
@@ -163,7 +171,8 @@
           }
 
           #start-btn {
-            width: 120px;
+            width: 100%;
+            max-width: 120px;
             font-size: 12px;
             padding: 8px 16px;
           }
@@ -171,29 +180,25 @@
           #touch-controls {
             display: block;
             margin-top: 10px;
-            max-width: 280px;
+            width: 100%;
           }
 
           .control-row {
-            gap: 8px;
-            margin-bottom: 8px;
+            gap: 5px;
+            margin-bottom: 5px;
           }
 
           .control-btn {
-            padding: 12px;
-            font-size: 16px;
-            min-width: 50px;
-            min-height: 50px;
+            padding: 8px;
+            font-size: 14px;
+            min-width: 35px;
+            min-height: 35px;
           }
         }
 
         @media (max-width: 480px) {
           body {
-            padding: 1px;
-          }
-
-          #container {
-            padding: 0;
+            padding: 2px;
           }
 
           #game-area {
@@ -201,13 +206,16 @@
           }
 
           #main-canvas {
-            max-width: calc(100vw - 10px);
-            max-height: 45vh;
+            max-width: 65vw;
+          }
+
+          #right-panel {
+            max-width: 30vw;
+            gap: 8px;
           }
 
           #side-panel {
-            gap: 8px;
-            justify-content: center;
+            gap: 5px;
           }
 
           #next-canvas {
@@ -217,43 +225,32 @@
 
           #img-howto {
             max-width: 60px;
-            max-height: 50px;
+            max-height: 45px;
           }
 
           #start-btn {
-            width: 100px;
+            width: 100%;
+            max-width: 100px;
             font-size: 11px;
             padding: 6px 12px;
           }
 
-          #touch-controls {
-            max-width: 250px;
-            margin-top: 8px;
-          }
-
-          .control-row {
-            gap: 6px;
-            margin-bottom: 6px;
-          }
-
           .control-btn {
-            padding: 10px;
-            font-size: 14px;
-            min-width: 45px;
-            min-height: 45px;
+            padding: 6px;
+            font-size: 12px;
+            min-width: 30px;
+            min-height: 30px;
           }
         }
 
         /* 非常に小さい画面用 */
         @media (max-width: 320px) {
           #main-canvas {
-            max-width: calc(100vw - 8px);
-            max-height: 40vh;
+            max-width: 70vw;
           }
 
-          #side-panel {
-            flex-direction: column;
-            gap: 5px;
+          #right-panel {
+            max-width: 25vw;
           }
 
           #next-canvas {
@@ -263,24 +260,20 @@
 
           #img-howto {
             max-width: 50px;
-            max-height: 40px;
+            max-height: 35px;
           }
 
           #start-btn {
-            width: 80px;
+            max-width: 80px;
             font-size: 10px;
-            padding: 5px 10px;
-          }
-
-          #touch-controls {
-            max-width: 200px;
+            padding: 4px 8px;
           }
 
           .control-btn {
-            padding: 8px;
-            font-size: 12px;
-            min-width: 35px;
-            min-height: 35px;
+            padding: 4px;
+            font-size: 10px;
+            min-width: 25px;
+            min-height: 25px;
           }
         }
       </style>
@@ -289,22 +282,24 @@
     <div id="container">
       <div id="game-area">
         <canvas id="main-canvas"></canvas>
-        <div id="side-panel">
-          <canvas id="next-canvas"></canvas>
-          <img id="img-howto" src="images/howto.png" alt="操作方法">
-          <button id="start-btn">開始</button>
-        </div>
-      </div>
-      
-      <!-- タッチ操作用コントロール -->
-      <div id="touch-controls">
-        <div class="control-row">
-          <button class="control-btn" id="rotate-btn">↻</button>
-        </div>
-        <div class="control-row">
-          <button class="control-btn" id="left-btn">←</button>
-          <button class="control-btn wide" id="down-btn">↓</button>
-          <button class="control-btn" id="right-btn">→</button>
+        <div id="right-panel">
+          <div id="side-panel">
+            <canvas id="next-canvas"></canvas>
+            <img id="img-howto" src="images/howto.png" alt="操作方法">
+            <button id="start-btn">開始</button>
+          </div>
+          
+          <!-- タッチ操作用コントロール -->
+          <div id="touch-controls">
+            <div class="control-row">
+              <button class="control-btn" id="rotate-btn">↻</button>
+            </div>
+            <div class="control-row">
+              <button class="control-btn" id="left-btn">←</button>
+              <button class="control-btn wide" id="down-btn">↓</button>
+              <button class="control-btn" id="right-btn">→</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
