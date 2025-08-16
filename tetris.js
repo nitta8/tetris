@@ -61,6 +61,23 @@ class Game{
         this.initMainCanvas()
         this.initNextCanvas()
         this.isPlaying = false
+        this.initScore()
+    }
+
+    // スコア関連の初期化
+    initScore(){
+        this.score = 0
+        this.level = 1
+        this.lines = 0
+        this.gameSpeed = GAME_SPEED
+        this.updateScoreDisplay()
+    }
+
+    // スコア表示の更新
+    updateScoreDisplay(){
+        document.getElementById('score').textContent = this.score.toLocaleString()
+        document.getElementById('level').textContent = this.level
+        document.getElementById('lines').textContent = this.lines
     }
 
     // メインキャンバスの初期化
@@ -131,6 +148,9 @@ class Game{
         // フィールドとミノの初期化
         this.field = new Field()
         this.isPlaying = true
+        
+        // スコアリセット
+        this.initScore()
 
         // 最初のミノを読み込み
         this.popMino()
@@ -138,9 +158,9 @@ class Game{
         // 初回描画
         this.drawAll()
 
-        // 落下処理
+        // 落下処理（レベルに応じた速度）
         clearInterval(this.timer)
-        this.timer = setInterval(() => this.dropMino(), GAME_SPEED);
+        this.timer = setInterval(() => this.dropMino(), this.gameSpeed);
 
         // キーボードイベントの登録
         this.setKeyEvent()
@@ -186,10 +206,52 @@ class Game{
                 e.y += this.mino.y
             })
             this.field.blocks = this.field.blocks.concat(this.mino.blocks)
-            this.field.checkLine()
+            
+            // ミノ配置ボーナス
+            this.score += this.level
+            
+            // ライン消去とスコア計算
+            const linesCleared = this.field.checkLine()
+            if(linesCleared > 0){
+                this.addScore(linesCleared)
+            } else {
+                this.updateScoreDisplay()
+            }
+            
             this.popMino()
         }
         this.drawAll();
+    }
+
+    // スコア加算とレベルアップ処理
+    addScore(linesCleared){
+        // ライン数を加算
+        this.lines += linesCleared
+        
+        // スコア計算（レベルとライン数に応じて）
+        const baseScore = [0, 100, 300, 500, 800] // 0, 1, 2, 3, 4ライン同時消去
+        this.score += baseScore[linesCleared] * this.level
+        
+        // レベルアップ判定（10ライン毎）
+        const newLevel = Math.floor(this.lines / 10) + 1
+        if(newLevel > this.level){
+            this.level = newLevel
+            this.updateGameSpeed()
+        }
+        
+        this.updateScoreDisplay()
+    }
+
+    // ゲーム速度の更新
+    updateGameSpeed(){
+        // レベルが上がるにつれて速くなる
+        this.gameSpeed = Math.max(50, GAME_SPEED - (this.level - 1) * 50)
+        
+        // タイマーを更新
+        if(this.isPlaying){
+            clearInterval(this.timer)
+            this.timer = setInterval(() => this.dropMino(), this.gameSpeed)
+        }
     }
     
     // 次の移動が可能かチェック（壁キック対応版）
@@ -608,13 +670,16 @@ class Field{
     }
 
     checkLine(){
+      let linesCleared = 0
       for(var r = 0; r < ROWS_COUNT; r++){
         var c = this.blocks.filter(block => block.y === r).length
         if(c === COLS_COUNT){
           this.blocks = this.blocks.filter(block => block.y !== r)
           this.blocks.filter(block => block.y < r).forEach(upper => upper.y++)
+          linesCleared++
         }
       }
+      return linesCleared
     }
 
     has(x, y){
