@@ -860,7 +860,7 @@ class Block{
 
 class Mino{
     constructor(){
-        this.type = 0; // I字型（長いライン）のミノのみ
+        this.type = Math.floor(Math.random() * 7); // 7種類のミノをランダム生成
         this.initBlocks()
     }
 
