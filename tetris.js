@@ -88,7 +88,15 @@ class Game{
         
         setTimeout(() => {
             levelElement.classList.remove('level-up')
-        }, 1500) // 1.5秒後に元に戻す
+        }, 3000) // 3秒後に元に戻す
+        
+        // 画面振動エフェクト
+        const container = document.getElementById('container')
+        container.style.animation = 'shake 0.5s ease-in-out 3'
+        
+        setTimeout(() => {
+            container.style.animation = ''
+        }, 1500)
     }
 
     // メインキャンバスの初期化
@@ -185,9 +193,13 @@ class Game{
 
         // ゲームオーバー判定
         if(!this.valid(0, 1)){
-            this.drawAll()
+            // 全てのタイマーを確実に停止
             clearInterval(this.timer)
+            this.timer = null
             this.isPlaying = false
+            this.isAnimating = false
+            
+            this.drawAll()
             this.showGameOver()
         }
     }
@@ -208,6 +220,9 @@ class Game{
 
     // ミノの落下処理
     dropMino(){
+        // ゲームが停止中は何もしない
+        if(!this.isPlaying || this.isAnimating) return
+        
         if(this.valid(0, 1)) {
             this.mino.y++;
         }else{
@@ -268,8 +283,12 @@ class Game{
                 // アニメーション終了後にライン消去とスコア処理
                 this.field.clearLines(completedLines)
                 this.addScore(completedLines.length)
-                this.popMino()
-                this.drawAll()
+                
+                // ゲームが継続中の場合のみ次のミノを生成
+                if(this.isPlaying){
+                    this.popMino()
+                    this.drawAll()
+                }
                 
                 // アニメーション終了、ゲーム再開
                 this.isAnimating = false
@@ -287,8 +306,8 @@ class Game{
         const baseScore = [0, 100, 300, 500, 800] // 0, 1, 2, 3, 4ライン同時消去
         this.score += baseScore[linesCleared] * this.level
         
-        // レベルアップ判定（10ライン毎）
-        const newLevel = Math.floor(this.lines / 10) + 1
+        // レベルアップ判定（1ライン毎に変更）
+        const newLevel = Math.floor(this.lines / 1) + 1
         if(newLevel > this.level){
             const oldLevel = this.level
             this.level = newLevel
@@ -306,32 +325,71 @@ class Game{
         // レベル表示を強調
         this.highlightLevelDisplay()
         
-        // 画面全体を光らせるエフェクト
+        // より派手なアニメーション設定
         let flashCount = 0
-        const maxFlashes = 8 // 4回点滅
+        const maxFlashes = 12 // 6回点滅に増加
+        let scaleEffect = 1.0
+        let rotateEffect = 0
         
         const levelUpInterval = setInterval(() => {
             this.drawAll()
             
+            // 背景フラッシュとテキストアニメーション
             if(flashCount % 2 === 1){
-                // 画面全体を薄い金色でオーバーレイ
-                this.mainCtx.fillStyle = 'rgba(255, 215, 0, 0.3)' // 金色半透明
+                // 虹色の背景エフェクト
+                const colors = ['rgba(255, 0, 0, 0.4)', 'rgba(255, 127, 0, 0.4)', 'rgba(255, 255, 0, 0.4)', 
+                               'rgba(0, 255, 0, 0.4)', 'rgba(0, 0, 255, 0.4)', 'rgba(75, 0, 130, 0.4)']
+                const colorIndex = Math.floor(flashCount / 2) % colors.length
+                this.mainCtx.fillStyle = colors[colorIndex]
                 this.mainCtx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
                 
-                // "LEVEL UP!" テキスト表示
-                this.mainCtx.fillStyle = '#FFD700' // 金色
-                this.mainCtx.font = 'bold 24px Arial'
-                this.mainCtx.textAlign = 'center'
-                this.mainCtx.fillText('LEVEL UP!', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 20)
+                // 星のエフェクト
+                this.drawStars()
                 
-                this.mainCtx.font = 'bold 18px Arial'
+                // アニメーション効果の計算
+                scaleEffect = 1.0 + Math.sin(flashCount * 0.5) * 0.3
+                rotateEffect = Math.sin(flashCount * 0.3) * 5
+                
+                this.mainCtx.save()
+                this.mainCtx.translate(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+                this.mainCtx.scale(scaleEffect, scaleEffect)
+                this.mainCtx.rotate(rotateEffect * Math.PI / 180)
+                
+                // "LEVEL UP!" メインテキスト（アウトライン付き）
+                this.mainCtx.font = 'bold 32px Arial'
+                this.mainCtx.lineWidth = 4
+                this.mainCtx.strokeStyle = '#000000'
+                this.mainCtx.fillStyle = '#FFD700'
+                this.mainCtx.textAlign = 'center'
+                this.mainCtx.strokeText('LEVEL UP!', 0, -30)
+                this.mainCtx.fillText('LEVEL UP!', 0, -30)
+                
+                // 光る効果
+                this.mainCtx.shadowColor = '#FFD700'
+                this.mainCtx.shadowBlur = 20
+                this.mainCtx.fillText('LEVEL UP!', 0, -30)
+                this.mainCtx.shadowBlur = 0
+                
+                // レベル変化テキスト
+                this.mainCtx.font = 'bold 24px Arial'
+                this.mainCtx.strokeStyle = '#000000'
+                this.mainCtx.lineWidth = 3
                 this.mainCtx.fillStyle = '#FFFFFF'
-                this.mainCtx.fillText(`${oldLevel} → ${newLevel}`, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 10)
+                this.mainCtx.strokeText(`${oldLevel} → ${newLevel}`, 0, 10)
+                this.mainCtx.fillText(`${oldLevel} → ${newLevel}`, 0, 10)
                 
                 // スピードアップメッセージ
-                this.mainCtx.font = 'bold 14px Arial'
-                this.mainCtx.fillStyle = '#FFFF00'
-                this.mainCtx.fillText('SPEED UP!', SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 + 35)
+                this.mainCtx.font = 'bold 18px Arial'
+                this.mainCtx.fillStyle = '#FF0000'
+                this.mainCtx.strokeStyle = '#000000'
+                this.mainCtx.lineWidth = 2
+                this.mainCtx.strokeText('SPEED UP!', 0, 40)
+                this.mainCtx.fillText('SPEED UP!', 0, 40)
+                
+                this.mainCtx.restore()
+                
+                // 画面境界の光るエフェクト
+                this.drawBorderGlow(flashCount)
             }
             
             flashCount++
@@ -339,12 +397,82 @@ class Game{
             if(flashCount >= maxFlashes){
                 clearInterval(levelUpInterval)
                 
-                // アニメーション終了
-                this.isAnimating = false
-                this.updateScoreDisplay()
+                // フィニッシュエフェクト
                 this.drawAll()
+                this.drawLevelUpFinish(newLevel)
+                
+                setTimeout(() => {
+                    this.isAnimating = false
+                    this.updateScoreDisplay()
+                    this.drawAll()
+                }, 1000) // 1秒間フィニッシュエフェクトを表示
             }
-        }, 150) // 150ms間隔で点滅
+        }, 120) // 少し速めに変更
+    }
+
+    // 星のエフェクト
+    drawStars(){
+        const starCount = 20
+        this.mainCtx.fillStyle = '#FFFF00'
+        
+        for(let i = 0; i < starCount; i++){
+            const x = Math.random() * SCREEN_WIDTH
+            const y = Math.random() * SCREEN_HEIGHT
+            const size = Math.random() * 3 + 2
+            
+            this.mainCtx.save()
+            this.mainCtx.translate(x, y)
+            this.mainCtx.rotate(Math.random() * Math.PI)
+            
+            // 星の形を描画
+            this.mainCtx.beginPath()
+            this.mainCtx.moveTo(0, -size)
+            this.mainCtx.lineTo(size * 0.3, -size * 0.3)
+            this.mainCtx.lineTo(size, 0)
+            this.mainCtx.lineTo(size * 0.3, size * 0.3)
+            this.mainCtx.lineTo(0, size)
+            this.mainCtx.lineTo(-size * 0.3, size * 0.3)
+            this.mainCtx.lineTo(-size, 0)
+            this.mainCtx.lineTo(-size * 0.3, -size * 0.3)
+            this.mainCtx.closePath()
+            this.mainCtx.fill()
+            
+            this.mainCtx.restore()
+        }
+    }
+
+    // 境界の光るエフェクト
+    drawBorderGlow(flashCount){
+        const intensity = Math.sin(flashCount * 0.5) * 0.5 + 0.5
+        const glowWidth = 8
+        
+        this.mainCtx.strokeStyle = `rgba(255, 215, 0, ${intensity})`
+        this.mainCtx.lineWidth = glowWidth
+        this.mainCtx.strokeRect(glowWidth/2, glowWidth/2, 
+                               SCREEN_WIDTH - glowWidth, SCREEN_HEIGHT - glowWidth)
+    }
+
+    // レベルアップ完了エフェクト
+    drawLevelUpFinish(newLevel){
+        this.mainCtx.save()
+        
+        // 金色の背景
+        this.mainCtx.fillStyle = 'rgba(255, 215, 0, 0.2)'
+        this.mainCtx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+        
+        // 完了メッセージ
+        this.mainCtx.translate(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+        this.mainCtx.font = 'bold 20px Arial'
+        this.mainCtx.fillStyle = '#FFD700'
+        this.mainCtx.strokeStyle = '#000000'
+        this.mainCtx.lineWidth = 2
+        this.mainCtx.textAlign = 'center'
+        
+        const message = `Level ${newLevel} 突入！`
+        this.mainCtx.strokeText(message, 0, 0)
+        this.mainCtx.fillText(message, 0, 0)
+        
+        this.mainCtx.restore()
     }
 
     // ゲーム速度の更新
@@ -627,6 +755,12 @@ class Game{
 
     // ゲーム再開
     restart(){
+        // 既存のタイマーを確実に停止
+        if(this.timer){
+            clearInterval(this.timer)
+            this.timer = null
+        }
+        
         // オーバーレイを非表示
         const overlay = document.getElementById('game-over-overlay')
         overlay.classList.add('hidden')
@@ -636,6 +770,7 @@ class Game{
         this.score = 0
         this.lines = 0
         this.level = 1
+        this.gameSpeed = GAME_SPEED  // ゲーム速度を初期値にリセット
         this.isPlaying = false
         this.isAnimating = false
         
@@ -653,7 +788,7 @@ class Game{
         this.isPlaying = true
         
         // タイマー再開
-        this.timer = setInterval(this.dropMino.bind(this), this.getDropInterval())
+        this.timer = setInterval(this.dropMino.bind(this), this.gameSpeed)
     }
 }
 
@@ -725,7 +860,7 @@ class Block{
 
 class Mino{
     constructor(){
-        this.type = 1; // 正方形（O型）のミノのみ
+        this.type = 0; // I字型（長いライン）のミノのみ
         this.initBlocks()
     }
 
